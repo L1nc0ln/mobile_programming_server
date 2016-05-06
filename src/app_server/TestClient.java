@@ -6,15 +6,12 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
-import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -28,10 +25,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class TestClient {
 	
-	private static int BUFFER_SIZE = 1024;
+	private static int BUFFER_SIZE = 4096;
 	private static int SALT_SIZE = 32;
 	private static int IV_SIZE = 16;
-	private static byte[] readBuffer = new byte[BUFFER_SIZE];
 	private static byte[] encryptionBuffer = new byte[32];
 	private static byte[] iv = new byte[IV_SIZE];
 	private static byte[] salt = new byte[SALT_SIZE];
@@ -64,6 +60,9 @@ public class TestClient {
 			
 			outputStream.write(plaintext.getBytes());
 			outputStream.flush();
+			
+			NetworkFileReceiver fileReceiver = new NetworkFileReceiver(inputStream, BUFFER_SIZE);
+			fileReceiver.receiveAndWriteFiles();
 			
 		}
 
