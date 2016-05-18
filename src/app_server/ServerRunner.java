@@ -10,9 +10,15 @@ public class ServerRunner  extends Thread implements Runnable {
 	
 	private ServerSocket serverSocket;
 	private Socket currentClientSocket;
+	private final String password;
+	private FileTracker fileTracker;
+	private String directory;
 	
-	public ServerRunner(int port, int backLog, InetAddress adress) throws IOException {
+	public ServerRunner(int port, int backLog, InetAddress adress, String password, FileTracker fileTracker, String directory) throws IOException {
 		serverSocket = new ServerSocket(port, backLog, adress);
+		this.password = password;
+		this.fileTracker = fileTracker;
+		this.directory = directory;
 	}
 
 	@Override
@@ -20,7 +26,7 @@ public class ServerRunner  extends Thread implements Runnable {
 		while(true){
 			try {
 				currentClientSocket = serverSocket.accept();
-				ConnectionHandlerRunner connectionHandler = new ConnectionHandlerRunner(currentClientSocket);
+				ConnectionHandlerRunner connectionHandler = new ConnectionHandlerRunner(currentClientSocket, password, fileTracker, directory);
 				connectionHandler.run();
 				if(ServerMain.serverShutdown.get()){
 					break;
@@ -33,7 +39,12 @@ public class ServerRunner  extends Thread implements Runnable {
 				e.printStackTrace();
 			}
 		}
-	}	
+		System.out.println("Serversocket shut down");
+	}
+	
+	public ServerSocket getServerSocket(){
+		return serverSocket;
+	}
 	
 
 }

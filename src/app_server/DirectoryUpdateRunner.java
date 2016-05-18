@@ -7,19 +7,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DirectoryUpdateRunner extends Thread implements Runnable {
 	
 	private String directory;
-	private ConcurrentHashMap<String, String> fileMap;
 	private int sleepTime;
-	private FileHasher fileHasher;
 	private FileTracker fileTracker;
 	
 
 
-	public DirectoryUpdateRunner(String directory, ConcurrentHashMap<String, String> fileMap, int sleepTime, FileHasher fileHasher,
+	public DirectoryUpdateRunner(String directory, ConcurrentHashMap<String, String> fileMap, int sleepTime,
 			FileTracker fileTracker) {
 		this.directory = directory;
-		this.fileMap = fileMap;
 		this.sleepTime = sleepTime;
-		this.fileHasher = fileHasher;
 		this.fileTracker = fileTracker;
 	}
 
@@ -29,13 +25,13 @@ public class DirectoryUpdateRunner extends Thread implements Runnable {
 		File hashMapFile = new File("FileHashes.txt");
 		if(hashMapFile.exists()){
 			try {
-				fileTracker.readHashMapFromFile(fileMap);
+				fileTracker.readHashMapFromFile();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		} else{
-			fileHasher.getFileHashesForDir(directory, fileMap);
-			fileTracker.writeHashMapToFile(fileMap);
+			fileTracker.getFileHashesForDir(directory);
+			fileTracker.writeHashMapToFile();
 		}
 		hashMapFile = null;
 		//check if Revisions.txt exists
@@ -48,7 +44,7 @@ public class DirectoryUpdateRunner extends Thread implements Runnable {
 			}
 		} else{
 			Revision firstRevision = new Revision(FileTracker.getCurrentRevisionNumber());
-			for(String filePath: fileMap.keySet()){
+			for(String filePath: fileTracker.getFileMap().keySet()){
 				firstRevision.addDelta(new Delta(filePath, Delta.FILE_ADDED));
 			}
 			fileTracker.addRevisionWithWriteToFile(firstRevision);
@@ -64,10 +60,10 @@ public class DirectoryUpdateRunner extends Thread implements Runnable {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			revision = fileHasher.updateHashesForDir(directory, fileMap);
+			revision = fileTracker.updateHashesForDir(directory);
 			if(revision != null){
 				fileTracker.addRevisionWithWriteToFile(revision);
-				fileTracker.writeHashMapToFile(fileMap);
+				fileTracker.writeHashMapToFile();
 			}
 		}
 		System.out.println("received shutdown signal - shutting down now");

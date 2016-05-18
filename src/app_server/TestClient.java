@@ -32,6 +32,7 @@ public class TestClient {
 	private static byte[] iv = new byte[IV_SIZE];
 	private static byte[] salt = new byte[SALT_SIZE];
 	private static String password = "I have to do something somewhat safe to store the password";
+	private static int revisionNumber = 0;
 
 	public static void main(String[] args) throws UnknownHostException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
 		NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException,
@@ -61,8 +62,11 @@ public class TestClient {
 			outputStream.write(plaintext.getBytes());
 			outputStream.flush();
 			
+			outputStream.write(new byte[]{(byte)(revisionNumber >>> 24), (byte)(revisionNumber >>> 16),
+					(byte)(revisionNumber >>> 8), (byte)revisionNumber});
+			
 			NetworkFileReceiver fileReceiver = new NetworkFileReceiver(inputStream, BUFFER_SIZE);
-			fileReceiver.receiveAndWriteFiles();
+			fileReceiver.receiveAndWriteFilesFromDeltas("F://Test");
 			
 		}
 

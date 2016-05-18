@@ -13,7 +13,7 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
-import java.util.Arrays;
+import java.util.Vector;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -27,44 +27,67 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class ConnectionHandlerRunner extends Thread implements Runnable {
 	
-	private final int BUFFER_SIZE = 1024;
+	private final int BUFFER_SIZE = 4096;
 	private final int SALT_SIZE = 32;
 	private final int IV_SIZE = 16;
 	private final int ANSWER_SIZE = 26;
+	private FileTracker fileTracker;
 	private Socket clientSocket;
 	private byte[] salt = new byte[SALT_SIZE];
 	private byte[] iv = new byte[IV_SIZE];
 	private byte[] clearTextAnswer = new byte[ANSWER_SIZE];
 	private String secret;
-	private int bytesRead;
-	private byte[] readBuffer = new byte[BUFFER_SIZE];
 	private byte[] message;
+	private byte[] readBuffer = new byte[4];
+	private String directory;
 
 	@Override
 	public void run() {
 		try(InputStream inputStream = clientSocket.getInputStream();
 				OutputStream outputStream = clientSocket.getOutputStream()){
-			message = getEncryptedMessage("I have to do something somewhat safe to store the password");
 			outputStream.write(message);
 			outputStream.flush();
 			outputStream.write(salt);
 			outputStream.flush();
 			outputStream.write(iv);
 			outputStream.flush();
-			bytesRead = inputStream.read(clearTextAnswer);
+			inputStream.read(clearTextAnswer);
 			if(evaluateAnswer(secret, clearTextAnswer)){
-				System.out.println("works");
+				inputStream.read(readBuffer);
+				int clientRevisionNumber = 0;
+				for (int byteToIntOffset = 0; byteToIntOffset < 4; byteToIntOffset++) {
+			        int shift = (4 - 1 - byteToIntOffset) * 8;
+			        clientRevisionNumber += (readBuffer[byteToIntOffset] & 0x000000FF) << shift;
+			    }
+				NetworkFileSender fileSender = new NetworkFileSender(outputStream, BUFFER_SIZE);
+				if(clientRevisionNumber == -1){
+					
+				} else{
+					Vector<Delta> changedFiles = fileTracker.createTotalDelta(clientRevisionNumber);
+					fileSender.sendFilesFromDeltas(changedFiles, directory);
+				}
 			} else{
+				clientSocket.close();
 				System.out.println("doesnt work");
 			}
-		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | InvalidKeySpecException 
-				| NoSuchPaddingException | InvalidParameterSpecException | IllegalBlockSizeException | BadPaddingException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public ConnectionHandlerRunner(Socket clientSocket){
+	public ConnectionHandlerRunner(Socket clientSocket, String password, FileTracker fileTracker, String directory){
 		this.clientSocket = clientSocket;
+		this.fileTracker = fileTracker;
+		this.directory = directory;
+		try {
+			message = getEncryptedMessage(password);
+		} catch (InvalidKeyException | NoSuchAlgorithmException
+				| InvalidKeySpecException | NoSuchPaddingException
+				| InvalidParameterSpecException | IllegalBlockSizeException
+				| BadPaddingException | UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	
