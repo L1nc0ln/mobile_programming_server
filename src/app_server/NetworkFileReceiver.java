@@ -50,7 +50,6 @@ public class NetworkFileReceiver {
 	
 	public void receiveAndWriteFilesFromDeltas(String pathPrefix) throws IOException{
 		inStream.read(readBuffer, 0, 4);
-		int testIndex = 0;
 		if(pathPrefix.charAt(pathPrefix.length() - 1) != '/'){
 			pathPrefix += "/";
 		}
@@ -64,10 +63,6 @@ public class NetworkFileReceiver {
 			String currentFileName = new String(fileInfoBuffer, "UTF-8").substring(pathStartIndex, readBytes);
 			currentFileName = pathPrefix + currentFileName;
 			currentFileName = currentFileName.replace("\\", "/");
-			if(testIndex == 0){
-				currentFileName = "F:\\Test\\textures\\fx\\flare_refl_rainbow.tex";
-				testIndex++;
-			}
 			currentFile = new File(currentFileName);
 			File parentFile = currentFile.getParentFile();
 			if(!parentFile.exists() && !parentFile.mkdirs()){
