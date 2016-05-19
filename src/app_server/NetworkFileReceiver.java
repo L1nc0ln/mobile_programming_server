@@ -54,13 +54,12 @@ public class NetworkFileReceiver {
 			pathPrefix += "/";
 		}
 		int numberOfFiles = Utils.byteToInt(readBuffer, 0);
-		System.out.println(numberOfFiles);
 		File currentFile;
 		for(int outerCounter = 0; outerCounter < numberOfFiles; outerCounter++){
 			readBytes = inStream.read(fileInfoBuffer);
 			long currentFileSize = Utils.byteToLong(fileInfoBuffer, sizeStartOffset);
 			System.out.println(currentFileSize);
-			String currentFileName = new String(fileInfoBuffer, "UTF-8").substring(pathStartIndex, readBytes);
+			String currentFileName = new String(getBytesFromTo(fileInfoBuffer, pathStartIndex, readBytes), "UTF-8");
 			currentFileName = pathPrefix + currentFileName;
 			currentFileName = currentFileName.replace("\\", "/");
 			currentFile = new File(currentFileName);
@@ -81,6 +80,14 @@ public class NetworkFileReceiver {
 				currentFile.delete();
 			}
 		}
+	}
+	
+	private byte[] getBytesFromTo(byte[] source, int startIndex, int endIndex){
+		byte[] returnValue = new byte[endIndex - startIndex];
+		for(int index = 0; index < endIndex - startIndex; index++){
+			returnValue[index] = source[index + startIndex];
+		}
+		return returnValue;
 	}
 
 }
