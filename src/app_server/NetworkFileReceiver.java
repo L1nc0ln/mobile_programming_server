@@ -1,5 +1,6 @@
 package app_server;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -7,87 +8,82 @@ import java.io.InputStream;
 
 public class NetworkFileReceiver {
 	
-	private final int fileInfoBufferSize = 512;
-	private final int sizeStartOffset = 1;
-	private final int pathStartIndex = 9;
-	private InputStream inStream;
+	private final int deltaIndex = 0;
+	private final int fileSizeStartOffset = 1;
+	private final int fileInfoLengthStartOffset = 9;
+	private final int pathStartIndex = 13;
+	private final int sizeInteger = 4;
+	private BufferedInputStream inStream;
 	private byte[] readBuffer;
-	private byte[] fileInfoBuffer = new byte[fileInfoBufferSize];
 	private int readBytes;
+	private boolean overflow = false;
 	
 	public NetworkFileReceiver(InputStream in, int bufferSize) throws IOException{
-		inStream = in;
+		inStream = new BufferedInputStream(in);
 		readBuffer = new byte[bufferSize];
 	}
 	
-//	public void receiveAndWriteFiles(String pathPrefix) throws IOException{
-//		inStream.read(readBuffer);
-//		int numberOfFiles = 0;
-//		for (int byteToIntOffset = 0; byteToIntOffset < 4; byteToIntOffset++) {
-//	        int shift = (4 - 1 - byteToIntOffset) * 8;
-//	        numberOfFiles += (readBuffer[byteToIntOffset] & 0x000000FF) << shift;
-//	    }
-//		File currentFile;
-//		for(int outerCounter = 0; outerCounter < numberOfFiles; outerCounter++){
-//			inStream.read(fileInfoBuffer);
-//			String currentFileName = new String(fileInfoBuffer, "UTF-8");
-//			currentFileName = pathPrefix + currentFileName;
-//			//TODO: testing shit
-////			System.out.println(currentFileName);
-////			currentFileName = "F://Tmp/testFile.pdf";
-//			currentFile = new File(currentFileName);
-//			File parentFile = currentFile.getParentFile();
-//			if(!parentFile.exists() && !parentFile.mkdirs()){
-//			    throw new IllegalStateException("Couldn't create dir: " + parentFile);
-//			}
-//			try(FileOutputStream fileOutStream = new FileOutputStream(currentFile)){
-//				while((readBytes = inStream.read(readBuffer)) > 0){
-//					fileOutStream.write(readBuffer, 0, readBytes);
-//				}
-//			}
-//		}
-//	}
-	
+	/**
+	 * Reads files with deltas from the inputStream initialised in the constructor
+	 * Schema is as follows:
+	 * 		first 4 bytes are an Integer specifying the number of files
+	 * 		for each file the first byte is the delta
+	 * 			byte 1-8 are a long specifying the length of the file (call it l)
+	 * 			byte 9-12 are a integer giving the last index of the file info part (call it x)
+	 * 			byte 13-x is the filename as a UTF-8 encoded String
+	 * 			the next l bytes are the contents of the file
+	 * see also the NetworkFileSender.sendFilesFromDeltas method
+	 * @param pathPrefix gets put in front of the received path
+	 * @throws IOException
+	 */
 	public void receiveAndWriteFilesFromDeltas(String pathPrefix) throws IOException{
-		inStream.read(readBuffer, 0, 4);
+		int numberOfFiles, fileInfoLength;
+		long currentFileBytesLeft;
+		File currentFile, parentFile;
+		String currentFileName;
 		if(pathPrefix.charAt(pathPrefix.length() - 1) != '/'){
 			pathPrefix += "/";
 		}
-		int numberOfFiles = Utils.byteToInt(readBuffer, 0);
-		File currentFile;
-		for(int outerCounter = 0; outerCounter < numberOfFiles; outerCounter++){
-			readBytes = inStream.read(fileInfoBuffer);
-			long currentFileSize = Utils.byteToLong(fileInfoBuffer, sizeStartOffset);
-			System.out.println(currentFileSize);
-			String currentFileName = new String(getBytesFromTo(fileInfoBuffer, pathStartIndex, readBytes), "UTF-8");
+		readBytes = inStream.read(readBuffer, 0, sizeInteger);
+		numberOfFiles = Utils.byteToInt(readBuffer, 0);
+		for(int fileNumber = 0; fileNumber < numberOfFiles; fileNumber++){
+			readBytes = inStream.read(readBuffer);
+			currentFileBytesLeft = Utils.byteToLong(readBuffer, fileSizeStartOffset);
+			fileInfoLength = Utils.byteToInt(readBuffer, fileInfoLengthStartOffset);
+			if(fileInfoLength == readBytes){
+				currentFileName = new String(Utils.getBytesFromTo(readBuffer, pathStartIndex, readBytes), "UTF-8");
+			} else{
+				System.out.println(fileInfoLength + ", " + readBytes);
+				currentFileName = new String(Utils.getBytesFromTo(readBuffer, pathStartIndex, fileInfoLength), "UTF-8");
+				overflow = true;
+				currentFileBytesLeft = currentFileBytesLeft - (readBytes - fileInfoLength);
+			}
 			currentFileName = pathPrefix + currentFileName;
 			currentFileName = currentFileName.replace("\\", "/");
 			currentFile = new File(currentFileName);
-			File parentFile = currentFile.getParentFile();
+			System.out.println(currentFile.getAbsolutePath());
+			parentFile = currentFile.getParentFile();
 			if(!parentFile.exists() && !parentFile.mkdirs()){
 			    throw new IllegalStateException("Couldn't create dir: " + parentFile);
 			}
-			System.out.println(currentFile.getAbsolutePath());
-			if(fileInfoBuffer[0] != Delta.FILE_REMOVED){
+			if(readBuffer[deltaIndex] != Delta.FILE_REMOVED){
 				try(FileOutputStream fileOutStream = new FileOutputStream(currentFile)){
-					readBytes = 0;
-					for(int counter = 0; counter < currentFileSize; counter = counter + readBytes){
+					if(overflow){
+						fileOutStream.write(readBuffer, fileInfoLength, readBytes - fileInfoLength);
+						overflow = false;
+					}
+					while(currentFileBytesLeft > readBuffer.length){
 						readBytes = inStream.read(readBuffer);
 						fileOutStream.write(readBuffer, 0, readBytes);
+						currentFileBytesLeft = currentFileBytesLeft - readBytes;
 					}
+					readBytes = inStream.read(readBuffer, 0, (int)currentFileBytesLeft);
+					fileOutStream.write(readBuffer, 0, readBytes);
 				}
-			} else{
+			} else {
 				currentFile.delete();
 			}
 		}
-	}
-	
-	private byte[] getBytesFromTo(byte[] source, int startIndex, int endIndex){
-		byte[] returnValue = new byte[endIndex - startIndex];
-		for(int index = 0; index < endIndex - startIndex; index++){
-			returnValue[index] = source[index + startIndex];
-		}
-		return returnValue;
 	}
 
 }

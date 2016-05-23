@@ -54,11 +54,7 @@ public class ConnectionHandlerRunner extends Thread implements Runnable {
 			inputStream.read(clearTextAnswer);
 			if(evaluateAnswer(secret, clearTextAnswer)){
 				inputStream.read(readBuffer);
-				int clientRevisionNumber = 0;
-				for (int byteToIntOffset = 0; byteToIntOffset < 4; byteToIntOffset++) {
-			        int shift = (4 - 1 - byteToIntOffset) * 8;
-			        clientRevisionNumber += (readBuffer[byteToIntOffset] & 0x000000FF) << shift;
-			    }
+				int clientRevisionNumber = Utils.byteToInt(readBuffer, 0);
 				NetworkFileSender fileSender = new NetworkFileSender(outputStream, BUFFER_SIZE);
 				if(clientRevisionNumber == -1){
 					
@@ -75,7 +71,7 @@ public class ConnectionHandlerRunner extends Thread implements Runnable {
 		}
 	}
 
-	public ConnectionHandlerRunner(Socket clientSocket, String password, FileTracker fileTracker, String directory){
+	public ConnectionHandlerRunner(Socket clientSocket, String password, FileTracker fileTracker, String directory) {
 		this.clientSocket = clientSocket;
 		this.fileTracker = fileTracker;
 		this.directory = directory;
@@ -85,7 +81,6 @@ public class ConnectionHandlerRunner extends Thread implements Runnable {
 				| InvalidKeySpecException | NoSuchPaddingException
 				| InvalidParameterSpecException | IllegalBlockSizeException
 				| BadPaddingException | UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

@@ -160,6 +160,11 @@ public class FileTracker {
 		return changedFiles;
 	}
 	
+	/**
+	 * Calculates and returns the hash for a given file
+	 * @param filename Path to the file
+	 * @return the sha-256 hash for the given file
+	 */
 	public String getFileHash(String filename){
 		try {
 			hashSum = MessageDigest.getInstance("SHA-256");
@@ -184,6 +189,11 @@ public class FileTracker {
 		return "";
 	}
 
+	/**
+	 * Puts all files in the directory (and its subdirectories) in the fileMap (of this class),
+	 * path as the key and the hashvalue as the value
+	 * @param directory Path to the directory
+	 */
 	public void getFileHashesForDir(String directory){
 		try {
 			Files.walk(Paths.get(directory)).forEach(filePath -> {
@@ -196,6 +206,13 @@ public class FileTracker {
 		}
 	}
 	
+	/**
+	 * Compares the files in the given directory with all files in the fileMap of this class
+	 * If a file was changed/added/deleted creates a Delta for the change and adds it to a Revision
+	 * that is returned if there was a change in the directory
+	 * @param directory directory to check for changes
+	 * @return null if no change was detected, else a Revision object containing all changes that were detected
+	 */
 	public Revision updateHashesForDir(String directory){
 		//create second HashMap that tracks which files we had in our directory and which files we had not
 		ConcurrentHashMap<String, Boolean> fileMapCopy = new ConcurrentHashMap<String, Boolean>(fileMap.size() * 4/3);
@@ -232,6 +249,7 @@ public class FileTracker {
 		for(String pathToFile: fileMapCopy.keySet()){
 			if(!fileMapCopy.get(pathToFile)){
 				revision.addDelta(new Delta(pathToFile.toString(), Delta.FILE_REMOVED));
+				fileMap.remove(pathToFile);
 			}
 		}
 		//if files changed send back the new revision with the deltas, else return null
@@ -242,6 +260,10 @@ public class FileTracker {
 		}
 	}
 	
+	/**
+	 * 
+	 * @return the current Revision number
+	 */
 	public static int getCurrentRevisionNumber(){
 		return currentRevisionNumber;
 	}
@@ -251,6 +273,10 @@ public class FileTracker {
 		fileMap = new ConcurrentHashMap<String, String>();
 	}
 
+	/**
+	 * 
+	 * @return the fileMap saved in this class
+	 */
 	public ConcurrentHashMap<String, String> getFileMap() {
 		return fileMap;
 	}
