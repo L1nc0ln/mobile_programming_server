@@ -83,4 +83,18 @@ public class Utils {
 		}
 	}
 	
+	/**
+	 * copy all bytes from sourceArray to the destArray, with a potential offset in the destarray
+	 * @param sourceArray
+	 * @param destArray
+	 * @param destOffset
+	 */
+	public static void copyBytesToArray(byte[] sourceArray, byte[] destArray, int destOffset){
+		if(!(sourceArray.length + destOffset > destArray.length)){
+			for(int index = 0; index < sourceArray.length; index++){
+				destArray[index + destOffset] = sourceArray[index];
+			}
+		}
+	}
+	
 }
