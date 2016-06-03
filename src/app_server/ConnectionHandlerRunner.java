@@ -43,6 +43,8 @@ public class ConnectionHandlerRunner extends Thread implements Runnable {
 
 	@Override
 	public void run() {
+		NetworkFileSender fileSender;
+		NetworkFileReceiver fileReceiver;
 		try(InputStream inputStream = clientSocket.getInputStream();
 				OutputStream outputStream = clientSocket.getOutputStream()){
 			outputStream.write(message);
@@ -55,9 +57,10 @@ public class ConnectionHandlerRunner extends Thread implements Runnable {
 			if(evaluateAnswer(secret, clearTextAnswer)){
 				inputStream.read(readBuffer);
 				int clientRevisionNumber = Utils.byteToInt(readBuffer, 0);
-				NetworkFileSender fileSender = new NetworkFileSender(outputStream, BUFFER_SIZE);
+				fileSender = new NetworkFileSender(outputStream, BUFFER_SIZE);
 				if(clientRevisionNumber == -1){
-					
+					fileReceiver = new NetworkFileReceiver(inputStream, BUFFER_SIZE);
+					fileSender.sendFiles(fileTracker.getChangedFiles(fileReceiver.receiveFileInfoList()), directory);
 				} else{
 					Vector<Delta> changedFiles = fileTracker.createTotalDelta(clientRevisionNumber);
 					fileSender.sendFilesFromDeltas(changedFiles, directory);

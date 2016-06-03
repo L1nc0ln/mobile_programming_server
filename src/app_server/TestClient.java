@@ -32,7 +32,7 @@ public class TestClient {
 	private static byte[] iv = new byte[IV_SIZE];
 	private static byte[] salt = new byte[SALT_SIZE];
 	private static String password = "I have to do something somewhat safe to store the password";
-	private static int revisionNumber = 1;
+	private static int revisionNumber = 0;
 
 	public static void main(String[] args) throws UnknownHostException, IOException, NoSuchAlgorithmException, InvalidKeySpecException,
 		NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException,

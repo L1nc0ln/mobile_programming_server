@@ -84,16 +84,20 @@ public class Utils {
 	}
 	
 	/**
-	 * copy all bytes from sourceArray to the destArray, with a potential offset in the destarray
+	 * copy all bytes from sourceArray to the destArray, with a potential offset in the destArray
 	 * @param sourceArray
 	 * @param destArray
 	 * @param destOffset
 	 */
-	public static void copyBytesToArray(byte[] sourceArray, byte[] destArray, int destOffset){
+	public static void copyBytesToArray(byte[] sourceArray, byte[] destArray, int destOffset) throws IndexOutOfBoundsException{
 		if(!(sourceArray.length + destOffset > destArray.length)){
 			for(int index = 0; index < sourceArray.length; index++){
 				destArray[index + destOffset] = sourceArray[index];
 			}
+		} else {
+			throw new IndexOutOfBoundsException("The destOffset plus the length of the sourceArray is bigger than the last destArray index"
+					+ "source length: " + sourceArray.length + ", dest length: " + destArray.length + ", dest offset: "
+					+ destOffset);
 		}
 	}
 	
